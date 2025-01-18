@@ -54,43 +54,13 @@ MOI.supports(::Optimizer{T}, ::MOI.ObjectiveFunction{MOI.ScalarAffineFunction{T}
 function MOI.optimize!(dest::Optimizer{T}, src::MOI.ModelLike) where {T<:Real}
     cache = OptimizerCache{T}()
     index_map = MOI.copy_to(cache, src)
+    
+    A, b, c, l, u = cache_to_data(cache)
 
-    @assert all(isfinite, cache.variables.lower)
-    @assert all(isfinite, cache.variables.upper)
-
-    A = convert(
-        SparseArrays.SparseMatrixCSC{T,Int},
-        cache.constraints.coefficients,
-    )
-    b = cache.constraints.constants
-    b = -b # because @odow set Ax+b ∈ {0}
-    c = zeros(T, size(A, 2))
-    offset = cache.objective.scalar_affine.constant
-    for term in cache.objective.scalar_affine.terms
-        c[term.variable.value] += term.coefficient
-    end
-    if cache.objective.sense == MOI.MAX_SENSE
-        c *= -1
-    end
-    l = cache.variables.lower
-    u = cache.variables.upper
     x, y, zₗ, zᵤ, solve_time = solve_sda(A, b, c, l, u, dest.settings)
-    for i in MOI.get(src, MOI.ListOfVariableIndices())
-        dest.x_primal[i] = x[index_map[i].value]
-    end
-    for i in MOI.get(src, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{T},MOI.Zeros}())
-        dest.y_dual[i] = y[index_map[i].value]
-    end
-    for i in MOI.get(src, MOI.ListOfConstraintIndices{MOI.VariableIndex,MOI.GreaterThan{T}}())
-        dest.zl_dual[i] = zₗ[index_map[i].value]
-    end
-    for i in MOI.get(src, MOI.ListOfConstraintIndices{MOI.VariableIndex,MOI.LessThan{T}}())
-        dest.zu_dual[i] = zᵤ[index_map[i].value]
-    end
-    dest.termination_status = MOI.OPTIMAL
-    dest.primal_status = MOI.UNKNOWN_RESULT_STATUS
-    dest.dual_status = MOI.FEASIBLE_POINT
-    dest.solve_time = solve_time
+
+    populate_dest!(dest, src, index_map, x, y, zₗ, zᵤ, solve_time)
+
     return index_map, false
 end
 
@@ -106,8 +76,8 @@ MOI.get(model::Optimizer, ::MOI.Silent) = !model.settings.verbose
 MOI.get(model::Optimizer, ::MOI.SolveTimeSec) = model.solve_time
 MOI.get(model::Optimizer, ::MOI.VariablePrimal, x::MOI.VariableIndex) = model.x_primal[x]
 MOI.get(model::Optimizer{T}, ::MOI.ConstraintDual, x::MOI.ConstraintIndex{MOI.VectorAffineFunction{T},MOI.Zeros}) where {T <: Real} = model.y_dual[x]
-MOI.get(model::Optimizer, ::MOI.ConstraintDual, x::MOI.ConstraintIndex{MOI.VariableIndex,MOI.GreaterThan}) = model.zl_dual[x]
-MOI.get(model::Optimizer, ::MOI.ConstraintDual, x::MOI.ConstraintIndex{MOI.VariableIndex,MOI.LessThan}) = model.zu_dual[x]
+MOI.get(model::Optimizer{T}, ::MOI.ConstraintDual, x::MOI.ConstraintIndex{MOI.VariableIndex,MOI.GreaterThan{T}})  where {T <: Real} = model.zl_dual[x]
+MOI.get(model::Optimizer{T}, ::MOI.ConstraintDual, x::MOI.ConstraintIndex{MOI.VariableIndex,MOI.LessThan{T}})  where {T <: Real} = model.zu_dual[x]
 MOI.get(model::Optimizer, ::MOI.ResultCount) = model.termination_status == MOI.OPTIMAL ? 1 : 0
 MOI.get(model::Optimizer, ::MOI.RawStatusString) = "$(model.termination_status)"
 MOI.get(model::Optimizer, ::MOI.TerminationStatus) = model.termination_status

@@ -48,6 +48,7 @@ function solve_sda(A, b, c, l, u, settings)
 end
 
 include("settings.jl")
-include("MOI.jl")
+include("MOI_wrapper.jl")
+include("utils.jl")
 
 end
