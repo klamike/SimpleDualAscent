@@ -57,7 +57,6 @@ function MOI.optimize!(dest::Optimizer{T}, src::MOI.ModelLike) where {T<:Real}
 
     @assert all(isfinite, cache.variables.lower)
     @assert all(isfinite, cache.variables.upper)
-    @assert all(cache.variables.lower .< cache.variables.upper)
 
     A = convert(
         SparseArrays.SparseMatrixCSC{T,Int},

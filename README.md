@@ -14,10 +14,10 @@ $$
 \end{align*}
 $$
 
-where $l<u$ and $l,u\in\mathbb{R}^n$ (consistent, finite, and non-trivial).
+where $l<u$ and $l,u\in\mathbb{R}^n$ (consistent and finite).
 
 > [!NOTE]
-> Since not all LPs can be bridged to the above form, SimpleDualAscent may raise errors upon `optimize!`, since we only check for consistent/finite/non-trivial condition then.
+> Since not all LPs can be bridged to the above form, SimpleDualAscent may raise errors upon `optimize!`, since we only check for consistent/finite condition then.
 > 
 > This may require users to reformulate their problem such that JuMP bridges it correctly. In general, it is good practice to define variables with upper/lower bounds, e.g. using `@variable(model, l ≤ x ≤ u)`, and using only equality constraints. If an inequality constraint is required, manually define a slack variable (with double-sided bounds) and reformulate manually so JuMP sees an equality constraint.
 > 
