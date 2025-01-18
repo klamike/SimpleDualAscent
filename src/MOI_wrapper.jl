@@ -3,6 +3,7 @@ import MathOptInterface as MOI
 
 MOI.Utilities.@product_of_sets(RHS, MOI.Zeros)
 
+
 const OptimizerCache{T <: Real} = MOI.Utilities.GenericModel{
     T,
     MOI.Utilities.ObjectiveContainer{T},
@@ -12,6 +13,7 @@ const OptimizerCache{T <: Real} = MOI.Utilities.GenericModel{
         Vector{T}, RHS{T},
     },
 }
+
 
 mutable struct Optimizer{T} <: MOI.AbstractOptimizer
     x_primal::Dict{MOI.VariableIndex,T}
@@ -36,14 +38,6 @@ mutable struct Optimizer{T} <: MOI.AbstractOptimizer
     end
 end
 
-function MOI.is_empty(model::Optimizer)
-    return isempty(model.x_primal) && model.termination_status == MOI.OPTIMIZE_NOT_CALLED
-end
-
-function MOI.empty!(model::Optimizer)
-    empty!(model.x_primal); empty!(model.y_dual); empty!(model.zl_dual); empty!(model.zu_dual); model.termination_status = MOI.OPTIMIZE_NOT_CALLED
-    return
-end
 
 MOI.supports_constraint(::Optimizer{T}, ::Type{MOI.VectorAffineFunction{T}}, ::Type{MOI.Zeros}) where {T <: Real} = true
 MOI.supports_constraint(::Optimizer{T}, ::Type{MOI.VariableIndex}, ::Type{MOI.GreaterThan{T}}) where {T <: Real} = true
@@ -57,21 +51,27 @@ function MOI.optimize!(dest::Optimizer{T}, src::MOI.ModelLike) where {T<:Real}
     
     A, b, c, l, u = cache_to_data(cache)
 
-    x, y, zₗ, zᵤ, solve_time = solve_sda(A, b, c, l, u, dest.settings)
+    x, y, zₗ, zᵤ, st, r = solve_sda(A, b, c, l, u, dest.settings)
 
-    populate_dest!(dest, src, index_map, x, y, zₗ, zᵤ, solve_time)
+    rnorm = LinearAlgebra.norm(r)
+    ts, ps = if rnorm ≈ 0
+        MOI.OPTIMAL, MOI.FEASIBLE_POINT
+    elseif rnorm < dest.settings.tol
+        MOI.ALMOST_OPTIMAL, MOI.NEARLY_FEASIBLE_POINT
+    elseif rnorm > dest.settings.tol
+        MOI.ITERATION_LIMIT, MOI.INFEASIBLE_POINT
+    end
+
+    populate_dest!(dest, src, index_map, x, y, zₗ, zᵤ, st, ts, ps)
 
     return index_map, false
 end
 
-MOI.get(model::Optimizer, attr::MOI.RawOptimizerAttribute) = getfield(model.settings, Symbol(attr.name))
 MOI.set(model::Optimizer, attr::MOI.RawOptimizerAttribute, value) = setfield!(model.settings, Symbol(attr.name), value)
-
-function MOI.set(model::Optimizer, ::MOI.Silent, value)
-    model.settings.verbose = !value
-end
+MOI.set(model::Optimizer, ::MOI.Silent, value) = setfield!(model.settings, :verbose, !value)
 
 MOI.get(::Optimizer{T}, ::MOI.SolverName) where {T <: Real} = T !== Float64 ? "SimpleDualAscent{$(T)}" : "SimpleDualAscent"
+MOI.get(model::Optimizer, attr::MOI.RawOptimizerAttribute) = getfield(model.settings, Symbol(attr.name))
 MOI.get(model::Optimizer, ::MOI.Silent) = !model.settings.verbose
 MOI.get(model::Optimizer, ::MOI.SolveTimeSec) = model.solve_time
 MOI.get(model::Optimizer, ::MOI.VariablePrimal, x::MOI.VariableIndex) = model.x_primal[x]
@@ -83,3 +83,16 @@ MOI.get(model::Optimizer, ::MOI.RawStatusString) = "$(model.termination_status)"
 MOI.get(model::Optimizer, ::MOI.TerminationStatus) = model.termination_status
 MOI.get(model::Optimizer, ::MOI.PrimalStatus) = model.primal_status
 MOI.get(model::Optimizer, ::MOI.DualStatus) = model.dual_status
+
+MOI.is_empty(model::Optimizer) = (
+    isempty(model.x_primal) && isempty(model.y_dual) && isempty(model.zl_dual) && isempty(model.zu_dual) &&
+    model.termination_status == MOI.OPTIMIZE_NOT_CALLED && model.solve_time == 0.0 &&
+    model.primal_status == MOI.UNKNOWN_RESULT_STATUS && model.dual_status == MOI.UNKNOWN_RESULT_STATUS
+)
+
+function MOI.empty!(model::Optimizer)
+    empty!(model.x_primal); empty!(model.y_dual); empty!(model.zl_dual); empty!(model.zu_dual)
+    model.termination_status = MOI.OPTIMIZE_NOT_CALLED; model.solve_time = 0.0
+    model.primal_status = MOI.UNKNOWN_RESULT_STATUS; model.dual_status = MOI.UNKNOWN_RESULT_STATUS
+    return # NOTE: settings are kept!
+end

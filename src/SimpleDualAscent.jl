@@ -26,7 +26,7 @@ function solve_sda(A, b, c, l, u, settings)
         y = y + α .* r
         
         if settings.verbose && i % settings.freq == 0
-            @info "Iteration $i: $(LinearAlgebra.norm(r)) $(b - A * x) $z, $x, $y"
+            @info "Iteration $i: residual=$(LinearAlgebra.norm(r))"
         end
 
         z = c - A' * y
@@ -38,13 +38,13 @@ function solve_sda(A, b, c, l, u, settings)
         r = (b - A * x)
     end
 
-    @info "Finished $i: $(LinearAlgebra.norm(r)) $(b - A * x) $z, $x, $y"
+    @info "Finished $i: residual=$(LinearAlgebra.norm(r))"
 
     zₗ = max.(z, 0)
     zᵤ = max.(-z, 0)
     
     finished = time()
-    return x, y, zₗ, zᵤ, finished - started
+    return x, y, zₗ, zᵤ, finished - started, r
 end
 
 include("settings.jl")
