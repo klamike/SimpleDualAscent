@@ -2,5 +2,5 @@ using SimpleDualAscent
 using Test
 
 @testset "SimpleDualAscent.jl" begin
-    # Write your tests here.
+    include("jump.jl")
 end
