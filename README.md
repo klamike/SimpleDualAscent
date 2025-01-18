@@ -14,7 +14,7 @@ $$
 \end{align*}
 $$
 
-where $l<u$ and $l,u\in\mathbb{R}^n$ (consistent and finite).
+where $l\leq u$ and $l,u\in\mathbb{R}^n$ (consistent and finite).
 
 > [!NOTE]
 > Since not all LPs can be bridged to the above form, SimpleDualAscent may raise errors upon `optimize!`, since we only check for consistent/finite condition then.
