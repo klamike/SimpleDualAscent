@@ -3,7 +3,8 @@ module SimpleDualAscent
 using SparseArrays
 using LinearAlgebra
 
-function solve_sda(A, b, c, l, u, settings)
+M, V = AbstractMatrix, AbstractVector
+function solve_sda(A::M{T}, b::V{T}, c::V{T}, l::V{T}, u::V{T}, settings) where {T<:Real}
     started = time()
 
     y = zeros(size(A, 1))  
@@ -38,7 +39,9 @@ function solve_sda(A, b, c, l, u, settings)
         r = (b - A * x)
     end
 
-    @info "Finished $i: residual=$(LinearAlgebra.norm(r))"
+    if settings.verbose
+        @info "Finished $i: residual=$(LinearAlgebra.norm(r))"
+    end
 
     zₗ = max.(z, 0)
     zᵤ = max.(-z, 0)
