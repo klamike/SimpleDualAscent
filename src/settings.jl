@@ -4,10 +4,10 @@ mutable struct SDASettings{T<:Real}
     verbose::Bool
     freq::Int64
     stepsize::T
-    function SDASettings{T}(;maxit, tol, verbose, freq, stepsize)  where {T<:Real}
+    function SDASettings{T}(; maxit, tol, verbose, freq, stepsize) where {T<:Real}
         new(maxit, tol, verbose, freq, stepsize)
     end
-    function SDASettings(;maxit, tol, verbose, freq, stepsize)
+    function SDASettings(; maxit, tol, verbose, freq, stepsize)
         new{Float64}(maxit, tol, verbose, freq, stepsize)
     end
 end
