@@ -20,9 +20,9 @@ function update_y!(y, α, r)
     y .= y + α * r
 end
 
-function iteration_log(µ, i, r, rb, settings)
+function iteration_log(µ, i, r, settings)
     if settings.verbose && i % settings.freq == 0
-        @info "Iteration $i: r=$(LinearAlgebra.norm(r)) rb=$(LinearAlgebra.norm(rb)) µ=$µ"
+        @info "Iteration $i: r=$(LinearAlgebra.norm(r)) µ=$µ"
     end
 end
 
@@ -44,7 +44,7 @@ function recover_x_barrier!(x, z, l, u, µ)
     end
 end
 
-function update_μ(μ, r, i, settings)
+function update_μ!(μ, r, i, settings)
     # TODO: monitor r to adjust μ
     if i % settings.mu_freq == 0
         μ /= 2

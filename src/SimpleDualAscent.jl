@@ -9,39 +9,35 @@ function solve_sda(A::M{T}, b::V{T}, c::V{T}, l::V{T}, u::V{T}, settings) where 
     started = time()
 
     x = zeros(size(A, 2))
-    xb = zeros(size(A, 2))
     y = zeros(size(A, 1))
     z = zeros(size(A, 2))
     r = zeros(size(A, 1))
-    rb = zeros(size(A, 1))
     μ = settings.mu_init
 
-    z = recover_z!(z, c, A, y)
-    xb = recover_x_barrier!(xb, z, l, u, μ)
-    rb = residual!(rb, b, A, xb)
+    recover_z!(z, c, A, y)
+    recover_x_barrier!(x, z, l, u, μ)
+    residual!(r, b, A, x)
 
     α = settings.stepsize
     τ = settings.tol
     Nmax = settings.maxit
 
     i = 1
-    while LinearAlgebra.norm(rb) > τ && i < Nmax
-        y = update_y!(y, α, rb)
-        iteration_log(µ, i, r, rb, settings)
-        z = recover_z!(z, c, A, y)
-        xb = recover_x_barrier!(xb, z, l, u, μ)
-        rb = residual!(rb, b, A, xb)
-        
-        x = recover_x!(x, z, l, u)
-        r = residual!(r, b, A, x)
-        μ = update_μ(μ, r, i, settings)
+    while LinearAlgebra.norm(r) > τ && i < Nmax
+        update_y!(y, α, r)
+        iteration_log(µ, i, r, settings)
+        recover_z!(z, c, A, y)
+        recover_x_barrier!(x, z, l, u, μ)
+        residual!(r, b, A, x)
+        update_μ!(μ, r, i, settings)
         i += 1
     end
+    recover_x!(x, z, l, u)
     zₗ, zᵤ = extract_zlzu(z)
     finished = time()
 
     if settings.verbose
-        @info "Finished $i: r=$(LinearAlgebra.norm(r)) rb=$(LinearAlgebra.norm(rb)) µ=$μ"
+        @info "Finished $i: r=$(LinearAlgebra.norm(r)) µ=$μ"
     end
 
     return x, y, zₗ, zᵤ, finished - started, r
