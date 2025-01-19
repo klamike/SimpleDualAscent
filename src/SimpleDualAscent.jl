@@ -3,55 +3,51 @@ module SimpleDualAscent
 using SparseArrays
 using LinearAlgebra
 
-M, V = AbstractMatrix, AbstractVector
+include("SDA_utils.jl")
+include("SDA_settings.jl")
 function solve_sda(A::M{T}, b::V{T}, c::V{T}, l::V{T}, u::V{T}, settings) where {T<:Real}
     started = time()
 
-    y = zeros(size(A, 1))
-
-    z = c - A' * y
-
     x = zeros(size(A, 2))
-    x[z.<0] .= u[z.<0]
-    x[z.>0] .= l[z.>0]
-    x[z.==0] .= (u[z.==0] + l[z.==0]) / 2
-    r = (b - A * x)
+    xb = zeros(size(A, 2))
+    y = zeros(size(A, 1))
+    z = zeros(size(A, 2))
+    r = zeros(size(A, 1))
+    rb = zeros(size(A, 1))
+    μ = settings.mu_init
+
+    z = recover_z!(z, c, A, y)
+    xb = recover_x_barrier!(xb, z, l, u, μ)
+    rb = residual!(rb, b, A, xb)
 
     α = settings.stepsize
     τ = settings.tol
     Nmax = settings.maxit
+
     i = 1
-    while LinearAlgebra.norm(r) > τ && i < Nmax
+    while LinearAlgebra.norm(rb) > τ && i < Nmax
+        y = update_y!(y, α, rb)
+        iteration_log(µ, i, r, rb, settings)
+        z = recover_z!(z, c, A, y)
+        xb = recover_x_barrier!(xb, z, l, u, μ)
+        rb = residual!(rb, b, A, xb)
+        
+        x = recover_x!(x, z, l, u)
+        r = residual!(r, b, A, x)
+        μ = update_μ(μ, r, i, settings)
         i += 1
-
-        y = y + α .* r
-
-        if settings.verbose && i % settings.freq == 0
-            @info "Iteration $i: residual=$(LinearAlgebra.norm(r))"
-        end
-
-        z = c - A' * y
-
-        x[z.<0] .= u[z.<0]
-        x[z.>0] .= l[z.>0]
-        x[z.==0] .= (u[z.==0] + l[z.==0]) / 2
-
-        r = (b - A * x)
     end
+    zₗ, zᵤ = extract_zlzu(z)
+    finished = time()
 
     if settings.verbose
-        @info "Finished $i: residual=$(LinearAlgebra.norm(r))"
+        @info "Finished $i: r=$(LinearAlgebra.norm(r)) rb=$(LinearAlgebra.norm(rb)) µ=$μ"
     end
 
-    zₗ = max.(z, 0)
-    zᵤ = max.(-z, 0)
-
-    finished = time()
     return x, y, zₗ, zᵤ, finished - started, r
 end
 
-include("settings.jl")
 include("MOI_wrapper.jl")
-include("utils.jl")
+include("MOI_utils.jl")
 
 end
