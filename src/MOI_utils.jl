@@ -24,9 +24,9 @@ function bound_slacks!(A, l, u)
             end
         end
 
-        u[j] = -1 * (sum(A[i, pos_x] .* l[pos_x]) + sum(A[i, neg_x] .* u[neg_x]))
+        u[j] = (sum(A[i, neg_x] .* l[neg_x]) + sum(A[i, pos_x] .* u[pos_x]))
 
-        @debug "Deduced upper bound $(u[j]) for variable $j"
+        @info "Deduced upper bound $(u[j]) for variable $j, so the bounds are $(l[j]) ≤ x[$j] ≤ $(u[j])"
     end
 
     for j in no_lower_bound
@@ -48,13 +48,14 @@ function bound_slacks!(A, l, u)
             end
         end
 
-        l[j] = -1 * (sum(A[i, neg_x] .* l[neg_x]) + sum(A[i, pos_x] .* u[pos_x]))
+        l[j] = (sum(A[i, pos_x] .* l[pos_x]) + sum(A[i, neg_x] .* u[neg_x]))
 
-        @debug "Deduced lower bound $(l[j]) for variable $j"
+        @info "Deduced lower bound $(l[j]) for variable $j, so the bounds are $(l[j]) ≤ x[$j] ≤ $(u[j])"
     end
 
     @assert all(isfinite, l) "Could not deduce bounds for all variables."
     @assert all(isfinite, u) "Could not deduce bounds for all variables."
+    @assert all(l .<= u) "Lower bounds are greater than upper bounds."
 end
 
 
