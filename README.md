@@ -1,7 +1,7 @@
 # SimpleDualAscent.jl
 
 > [!WARNING]
-> This package is still under construction. Use with caution.
+> This package is still under construction. It may return incorrect results. Use with caution.
 
 Inspired by [SimplePDHG.jl](https://github.com/Shuvomoy/SimplePDHG.jl), this package provides a minimal implementation of
 the dual ascent algorithm for solving LPs of the form:
