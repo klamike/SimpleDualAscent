@@ -23,13 +23,15 @@ mutable struct Optimizer{T} <: MOI.AbstractOptimizer
     termination_status::MOI.TerminationStatusCode
     primal_status::MOI.ResultStatusCode
     dual_status::MOI.ResultStatusCode
+    primal_objective::T
+    dual_objective::T
     settings::SDASettings
     solve_time::Float64
 
     function Optimizer{T}() where {T<:Real}
         return new(
             Dict{MOI.VariableIndex,T}(), Dict{MOI.ConstraintIndex,T}(), Dict{MOI.ConstraintIndex,T}(), Dict{MOI.ConstraintIndex,T}(),
-            MOI.OPTIMIZE_NOT_CALLED, MOI.UNKNOWN_RESULT_STATUS, MOI.UNKNOWN_RESULT_STATUS, deepcopy(SimpleDualAscent.default_settings), 0.0,
+            MOI.OPTIMIZE_NOT_CALLED, MOI.UNKNOWN_RESULT_STATUS, MOI.UNKNOWN_RESULT_STATUS, NaN, NaN, deepcopy(SimpleDualAscent.default_settings), 0.0,
         )
     end
 
@@ -62,7 +64,11 @@ function MOI.optimize!(dest::Optimizer{T}, src::MOI.ModelLike) where {T<:Real}
         MOI.ITERATION_LIMIT, MOI.INFEASIBLE_POINT
     end
 
-    populate_dest!(dest, src, index_map, x, y, zₗ, zᵤ, st, ts, ps)
+    populate_dest!(dest, src, index_map,
+        x, y, zₗ, zᵤ,
+        A, b, c, l, u,
+        st, ts, ps
+    )
 
     return index_map, false
 end
@@ -83,6 +89,8 @@ MOI.get(model::Optimizer, ::MOI.RawStatusString) = "$(model.termination_status)"
 MOI.get(model::Optimizer, ::MOI.TerminationStatus) = model.termination_status
 MOI.get(model::Optimizer, ::MOI.PrimalStatus) = model.primal_status
 MOI.get(model::Optimizer, ::MOI.DualStatus) = model.dual_status
+MOI.get(model::Optimizer, ::MOI.ObjectiveValue) = model.primal_objective
+MOI.get(model::Optimizer, ::MOI.DualObjectiveValue) = model.dual_objective
 
 MOI.is_empty(model::Optimizer) = (
     isempty(model.x_primal) && isempty(model.y_dual) && isempty(model.zl_dual) && isempty(model.zu_dual) &&

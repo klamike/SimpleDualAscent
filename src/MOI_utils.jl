@@ -82,7 +82,7 @@ function cache_to_data(cache::OptimizerCache{T}) where {T<:Real}
 end
 
 
-function populate_dest!(dest::Optimizer{T}, src, index_map, x, y, zₗ, zᵤ, solve_time, ts, ps) where {T<:Real}
+function populate_dest!(dest::Optimizer{T}, src, index_map, x, y, zₗ, zᵤ, A, b, c, l, u, solve_time, ts, ps) where {T<:Real}
     for i in MOI.get(src, MOI.ListOfVariableIndices())
         dest.x_primal[i] = x[index_map[i].value]
     end
@@ -99,4 +99,6 @@ function populate_dest!(dest::Optimizer{T}, src, index_map, x, y, zₗ, zᵤ, so
     dest.primal_status = ps
     dest.dual_status = MOI.FEASIBLE_POINT
     dest.solve_time = solve_time
+    dest.primal_objective = dot(c, x)
+    dest.dual_objective = dot(b, y) + dot(l, zₗ) - dot(u, zᵤ)
 end
