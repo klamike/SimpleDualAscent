@@ -1,4 +1,4 @@
-# SimpleDualAscent
+# SimpleDualAscent.jl
 
 > [!WARNING]
 > This package is still under construction. Use with caution.
