@@ -9,14 +9,14 @@ mutable struct SDASettings{T<:Real}
     mu_freq::Int64
     function SDASettings{T}(; kwargs...) where T
         new(
-            get(kwargs, :maxit, 1e+6),
+            get(kwargs, :maxit, 1e+5),
             get(kwargs, :tol, 1e-6),
             get(kwargs, :verbose, true),
-            get(kwargs, :freq, 1000),
+            get(kwargs, :freq, 1e+3),
             get(kwargs, :stepsize, 1e-4),
             get(kwargs, :mu_init, 0.0),
             get(kwargs, :mu_threshold, 1e-8),
-            get(kwargs, :mu_freq, 1000),
+            get(kwargs, :mu_freq, 1e+3),
         )
     end
     function SDASettings(; kwargs...)
