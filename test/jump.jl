@@ -37,16 +37,19 @@ function simple_model()
     @test isapprox(dual(ineq), -1/3, atol=1e-3)
 
     model = Model(SimpleDualAscent.Optimizer)
-    @variable(model, x ∈ MOI.Interval(0, 1))
-    @variable(model, y ∈ MOI.Interval(0, 1))
+    @variable(model,  0 ≤ x ≤ 1)
+    @variable(model,  0 ≤ y ≤ 1)
+    @variable(model,  1 ≤ z ≤ 2)
     @constraint(model, eq, x + y == 1)
-    @constraint(model, ineq, x + 2y ≥ 1)
-    @objective(model, Min, x + 2y)
+    @constraint(model, ineq, x + 2y + z ≥ 1)
+    @objective(model, Min, x + 2y-z)
     optimize!(model)
     @test termination_status(model) == MOI.OPTIMAL
     @test value(x) == 1.0
     @test value(y) == 0.0
-    @test isapprox(dual(eq)+dual(ineq), 1.0, atol=1e-3)
+    @test value(z) == 2.0
+    @test isapprox(dual(eq), 1.0, atol=1e-3)
+    @test isapprox(dual(ineq), 0.0, atol=1e-3)
 end
 
 @testset "JuMP" begin
