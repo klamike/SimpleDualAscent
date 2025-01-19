@@ -14,6 +14,7 @@ function simple_model()
     @test isapprox(dual(eq), 1.0, atol=1e-3)
 
     model = Model(SimpleDualAscent.Optimizer)
+    set_silent(model)
     @variable(model, 0 ≤ x ≤ 0)
     @variable(model, 0 ≤ y ≤ 1)
     @constraint(model, eq, x + y == 1)
